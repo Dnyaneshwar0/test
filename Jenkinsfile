@@ -23,7 +23,7 @@ pipeline {
             steps {
                 script {
                     def result = sh(
-                        script: 'python3 verify_sig.py output.sig sbom.json public_key.pem',
+                        script: 'python3 verify_sig.py output.sig trivy_report.json public_key.pem',
                         returnStatus: true
                     )
 
