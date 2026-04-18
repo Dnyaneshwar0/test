@@ -86,16 +86,12 @@ pipeline {
             steps {
                 sh '''
                 echo "Scanning image: $IMAGE_TO_SCAN"
-
-
-                docker run --rm \
-                  -u root \
-                  -e IMAGE_TO_SCAN="$IMAGE_TO_SCAN" \
-                  -v /var/run/docker.sock:/var/run/docker.sock \
-                  -v "$WORKSPACE/reports:/reports" \
-                  -w /app \
-                  parthg23/pentest-toolkit:latest \
-                  pentest.sh
+                    sudo docker run -u root --rm \
+                    -v /var/run/docker.sock:/var/run/docker.sock \
+                    -v "$(pwd)/../reports:/reports" \
+                    -w /app \
+                    parthg23/pentest-toolkit:latest \
+                    pentest.sh $IMAGE_TO_SCAN
                 '''
             }
         }
