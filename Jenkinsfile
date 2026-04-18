@@ -90,7 +90,7 @@ pipeline {
                     -v /var/run/docker.sock:/var/run/docker.sock \
                     -v "$(pwd)/../reports:/reports" \
                     -w /app \
-                    parthg23/pentest-toolkit:latest \
+                    pentest-toolkit:latest \
                     pentest.sh $IMAGE_TO_SCAN
                 '''
             }
