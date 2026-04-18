@@ -1,90 +1,154 @@
 pipeline {
     agent any
 
+
+    // =========================
+    // TRIGGERS
+    // =========================
     triggers {
         githubPush()
     }
 
+
+    // =========================
+    // GLOBAL ENV VARIABLES
+    // =========================
     environment {
         REPORT_DIR = "reports"
+        IMAGE_TO_SCAN = "nginx:latest"
+        CONTAINER_TO_SCAN = "my-nginx"
     }
+
 
     stages {
 
+
+        // =========================
+        // CHECKOUT CODE
+        // =========================
         stage('Checkout') {
             steps {
                 checkout scm
             }
         }
 
-        stage('Install Dependencies') {
+
+        // =========================
+        // PYTHON ENV SETUP (CLEAN WAY)
+        // =========================
+        stage('Setup Python Environment') {
             steps {
                 sh '''
-                python3 -m pip install --upgrade pip --break-system-packages || true
-                python3 -m pip install cryptography --break-system-packages
+                python3 -m venv venv
+                . venv/bin/activate
+
+
+                pip install --upgrade pip
+                pip install cryptography
                 '''
             }
         }
 
+
+        // =========================
+        // SIGNATURE VERIFICATION
+        // =========================
         stage('Verify Signature') {
             steps {
                 script {
                     def result = sh(
-                        script: 'python3 verify_sig.py output.sig trivy_report.json public_key.pem',
+                        script: '''
+                        . venv/bin/activate
+                        python3 verify_sig.py output.sig trivy_report.json public_key.pem
+                        ''',
                         returnStatus: true
                     )
 
+
                     if (result != 0) {
-                        error("❌ Signature is INVALID — build failed.")
+                        error("❌ Signature INVALID — stopping pipeline.")
                     }
                 }
             }
         }
 
-        stage('Pull Docker Image') {
-            steps {
-                sh 'docker pull pen-tool:latest || true'
-            }
-        }
 
-        stage('Run Pentest Toolkit') {
+        // =========================
+        // PREPARE REPORT DIR
+        // =========================
+        stage('Prepare Reports') {
             steps {
                 sh '''
                 mkdir -p $REPORT_DIR
-
-                docker run -u root --rm \
-                  -v "$WORKSPACE/$REPORT_DIR:/app" \
-                  -w /app \
-                  parthg23/pentest-toolkit:latest \
-                  pentest.sh nginx:latest
                 '''
             }
         }
 
-        stage('Run Security Auditor') {
+
+        // =========================
+        // PENTEST TOOLKIT (IMAGE SCAN)
+        // =========================
+        stage('Pentest Toolkit - Image Scan') {
             steps {
                 sh '''
-                mkdir -p $REPORT_DIR
+                echo "Scanning image: $IMAGE_TO_SCAN"
 
-                docker run -u root --rm \
-                  -v "$WORKSPACE/$REPORT_DIR:/app" \
+
+                docker run --rm \
+                  -u root \
+                  -e IMAGE_TO_SCAN="$IMAGE_TO_SCAN" \
+                  -v /var/run/docker.sock:/var/run/docker.sock \
+                  -v "$WORKSPACE/reports:/reports" \
                   -w /app \
+                  parthg23/pentest-toolkit:latest \
+                  pentest.sh
+                '''
+            }
+        }
+
+
+        // =========================
+        // SECURITY AUDITOR (CONTAINER SCAN)
+        // =========================
+        stage('Security Auditor - Container Scan') {
+            steps {
+                sh '''
+                echo "Scanning container: $CONTAINER_TO_SCAN"
+
+
+                docker run --rm \
+                  -u root \
+                  -e CONTAINER_TO_SCAN="$CONTAINER_TO_SCAN" \
+                  -v /var/run/docker.sock:/var/run/docker.sock \
+                  -v "$WORKSPACE/reports:/reports" \
+                  -w /audit \
                   parthg23/security-auditor:latest \
-                  /audit/containertest.sh sec-aud:latest
+                  containertest.sh
                 '''
             }
         }
     }
 
+
+    // =========================
+    // POST ACTIONS
+    // =========================
     post {
         success {
-            echo "✅ Pipeline completed successfully."
+            echo "✅ Build SUCCESS — Signature verified + security scans completed."
+
+
             archiveArtifacts artifacts: 'reports/**/*', allowEmptyArchive: true
         }
 
+
         failure {
-            echo "❌ Pipeline failed."
+            echo "❌ Build FAILED — check logs (signature or security scan issue)."
+
+
             archiveArtifacts artifacts: 'reports/**/*', allowEmptyArchive: true
         }
     }
 }
+
+
