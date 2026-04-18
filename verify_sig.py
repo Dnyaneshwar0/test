@@ -1,6 +1,6 @@
 """
 verify_sig.py — verify an output.sig file produced by the Docker signing container.
-change 4
+change 5
 Usage:
     python verify_sig.py output.sig sbom.json public_key.pem
 
