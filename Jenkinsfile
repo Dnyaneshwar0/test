@@ -56,7 +56,7 @@ pipeline {
                   -v "$WORKSPACE/$REPORT_DIR:/app" \
                   -w /app \
                   parthg23/pentest-toolkit:latest \
-                  pentest.sh pen-tool:latest
+                  pentest.sh nginx:latest
                 '''
             }
         }
