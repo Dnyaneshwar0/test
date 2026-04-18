@@ -53,7 +53,6 @@ pipeline {
                 script {
                     def result = sh(
                         script: '''
-                        . venv/bin/activate
                         python3 verify_sig.py output.sig trivy_report.json public_key.pem
                         ''',
                         returnStatus: true
