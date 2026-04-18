@@ -86,7 +86,7 @@ pipeline {
             steps {
                 sh '''
                 echo "Scanning image: $IMAGE_TO_SCAN"
-                    sudo docker run -u root --rm \
+                    docker run -u root --rm \
                     -v /var/run/docker.sock:/var/run/docker.sock \
                     -v "$(pwd)/../reports:/reports" \
                     -w /app \
@@ -104,8 +104,8 @@ pipeline {
             steps {
                 sh '''
                 echo "Scanning container: $CONTAINER_TO_SCAN"
-
-                sudo docker run -u root --rm \
+                
+                docker run -u root --rm \
                 -v /var/run/docker.sock:/var/run/docker.sock \
                 -v "$(pwd)/../reports":/app \
                 -w /app \
