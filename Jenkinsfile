@@ -5,6 +5,10 @@ pipeline {
         githubPush()
     }
 
+    environment {
+        REPORT_DIR = "reports"
+    }
+
     stages {
 
         stage('Checkout') {
@@ -16,7 +20,8 @@ pipeline {
         stage('Install Dependencies') {
             steps {
                 sh '''
-                pip install cryptography --quiet --break-system-packages || pip install cryptography --quiet
+                python3 -m pip install --upgrade pip --break-system-packages || true
+                python3 -m pip install cryptography --break-system-packages
                 '''
             }
         }
@@ -39,11 +44,10 @@ pipeline {
         stage('Run Pentest Toolkit') {
             steps {
                 sh '''
-                mkdir -p reports
+                mkdir -p $REPORT_DIR
 
-                sudo docker run -u root --rm \
-                  -v /var/run/docker.sock:/var/run/docker.sock \
-                  -v "$WORKSPACE/reports":/app \
+                docker run --rm \
+                  -v "$WORKSPACE/$REPORT_DIR:/app" \
                   -w /app \
                   parthg23/pentest-toolkit:latest \
                   pentest.sh pen-tool:latest
@@ -54,11 +58,10 @@ pipeline {
         stage('Run Security Auditor') {
             steps {
                 sh '''
-                mkdir -p reports
+                mkdir -p $REPORT_DIR
 
-                sudo docker run -u root --rm \
-                  -v /var/run/docker.sock:/var/run/docker.sock \
-                  -v "$WORKSPACE/reports":/app \
+                docker run --rm \
+                  -v "$WORKSPACE/$REPORT_DIR:/app" \
                   -w /app \
                   parthg23/security-auditor:latest \
                   /audit/containertest.sh sec-aud:latest
@@ -69,12 +72,12 @@ pipeline {
 
     post {
         success {
-            echo "✅ Signature VALID + Security scans completed."
+            echo "✅ Pipeline completed successfully."
             archiveArtifacts artifacts: 'reports/**/*', allowEmptyArchive: true
         }
 
         failure {
-            echo "❌ Pipeline failed (signature or security scan)."
+            echo "❌ Pipeline failed."
             archiveArtifacts artifacts: 'reports/**/*', allowEmptyArchive: true
         }
     }
