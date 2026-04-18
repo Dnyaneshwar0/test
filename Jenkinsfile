@@ -105,15 +105,13 @@ pipeline {
                 sh '''
                 echo "Scanning container: $CONTAINER_TO_SCAN"
 
+                sudo docker run -u root --rm \
+                -v /var/run/docker.sock:/var/run/docker.sock \
+                -v "$(pwd)/../reports":/app \
+                -w /app \
+                parthg23/security-auditor:latest \
+                /audit/containertest.sh $CONTAINER_TO_SCAN
 
-                docker run --rm \
-                  -u root \
-                  -e CONTAINER_TO_SCAN="$CONTAINER_TO_SCAN" \
-                  -v /var/run/docker.sock:/var/run/docker.sock \
-                  -v "$WORKSPACE/reports:/reports" \
-                  -w /audit \
-                  parthg23/security-auditor:latest \
-                  containertest.sh
                 '''
             }
         }
