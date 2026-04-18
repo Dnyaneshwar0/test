@@ -15,8 +15,8 @@ pipeline {
     // =========================
     environment {
         REPORT_DIR = "reports"
-        IMAGES_TO_SCAN = "nginx:latest redis:alpin"
-        CONTAINERS_TO_SCAN = "my-nginx my-nginx-2"
+        IMAGE_TO_SCAN = "nginx:latest"
+        CONTAINER_TO_SCAN = "my-nginx"
     }
 
 
@@ -84,19 +84,15 @@ pipeline {
         // =========================
         stage('Pentest Toolkit - Image Scan') {
             steps {
-                script {
-                    def images = env.IMAGES_TO_SCAN.split()
-                    images.each { image ->
-                        sh """
-                            echo "Scanning image: ${image}"
-                            docker run -u root --rm \
-                                -v /var/run/docker.sock:/var/run/docker.sock \
-                                -v "\$(pwd)/../reports:/workspace" \
-                                pentest-toolkit:latest \
-                                pentest.sh ${image}
-                        """
-                    }
-                }            
+                sh '''
+                echo "Scanning image: $IMAGE_TO_SCAN"
+                    docker run -u root --rm \
+                    -v /var/run/docker.sock:/var/run/docker.sock \
+                    -v "$(pwd)/../reports:/reports" \
+                    -w /app \
+                    pentest-toolkit:latest \
+                    pentest.sh $IMAGE_TO_SCAN
+                '''
             }
         }
 
@@ -106,19 +102,17 @@ pipeline {
         // =========================
         stage('Security Auditor - Container Scan') {
             steps {
-            script {
-                    def containers = env.CONTAINERS_TO_SCAN.split()
-                    containers.each { cname ->
-                        sh """
-                            echo "Scanning container: ${cname}"
-                            docker run -u root --rm \
-                                -v /var/run/docker.sock:/var/run/docker.sock \
-                                -v "\$(pwd)/../reports:/workspace" \
-                                security-auditor:latest \
-                                /audit/containertest.sh ${cname}
-                        """
-                    }
-                }
+                sh '''
+                echo "Scanning container: $CONTAINER_TO_SCAN"
+                
+                docker run -u root --rm \
+                -v /var/run/docker.sock:/var/run/docker.sock \
+                -v "$(pwd)/../reports":/app \
+                -w /app \
+                parthg23/security-auditor:latest \
+                /audit/containertest.sh $CONTAINER_TO_SCAN
+
+                '''
             }
         }
     }
