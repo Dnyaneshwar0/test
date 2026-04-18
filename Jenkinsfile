@@ -39,9 +39,7 @@ pipeline {
         stage('Setup Python Environment') {
             steps {
                 sh '''
-
-                pip install --upgrade pip
-                pip install cryptography
+                pip install cryptography --quiet --break-system-packages || pip install cryptography --quiet'
                 '''
             }
         }
