@@ -41,7 +41,7 @@ pipeline {
                 sh '''
                 mkdir -p reports
 
-                docker run -u root --rm \
+                sudo docker run -u root --rm \
                   -v /var/run/docker.sock:/var/run/docker.sock \
                   -v "$WORKSPACE/reports":/app \
                   -w /app \
@@ -56,7 +56,7 @@ pipeline {
                 sh '''
                 mkdir -p reports
 
-                docker run -u root --rm \
+                sudo docker run -u root --rm \
                   -v /var/run/docker.sock:/var/run/docker.sock \
                   -v "$WORKSPACE/reports":/app \
                   -w /app \
