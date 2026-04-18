@@ -41,12 +41,18 @@ pipeline {
             }
         }
 
+        stage('Pull Docker Image') {
+            steps {
+                sh 'docker pull pen-tool:latest || true'
+            }
+        }
+
         stage('Run Pentest Toolkit') {
             steps {
                 sh '''
                 mkdir -p $REPORT_DIR
 
-                docker run --rm \
+                docker run -u root --rm \
                   -v "$WORKSPACE/$REPORT_DIR:/app" \
                   -w /app \
                   parthg23/pentest-toolkit:latest \
@@ -60,7 +66,7 @@ pipeline {
                 sh '''
                 mkdir -p $REPORT_DIR
 
-                docker run --rm \
+                docker run -u root --rm \
                   -v "$WORKSPACE/$REPORT_DIR:/app" \
                   -w /app \
                   parthg23/security-auditor:latest \
