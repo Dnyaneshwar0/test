@@ -15,8 +15,8 @@ pipeline {
     // =========================
     environment {
         REPORT_DIR = "reports"
-        IMAGE_TO_SCAN = "nginx:latest"
-        CONTAINER_TO_SCAN = "my-nginx"
+        IMAGES_TO_SCAN = "nginx:latest redis:alpin"
+        CONTAINERS_TO_SCAN = "my-nginx my-nginx-2"
     }
 
 
@@ -84,15 +84,19 @@ pipeline {
         // =========================
         stage('Pentest Toolkit - Image Scan') {
             steps {
-                sh '''
-                echo "Scanning image: $IMAGE_TO_SCAN"
-                    docker run -u root --rm \
-                    -v /var/run/docker.sock:/var/run/docker.sock \
-                    -v "$(pwd)/../reports:/reports" \
-                    -w /app \
-                    pentest-toolkit:latest \
-                    pentest.sh $IMAGE_TO_SCAN
-                '''
+                script {
+                    def images = env.IMAGES_TO_SCAN.split() 
+                    images.each { image ->
+                        sh """
+                        echo "Scanning image: ${image}"
+                        docker run -u root --rm \
+                            -v /var/run/docker.sock:/var/run/docker.sock \
+                            -v "$(pwd)/../reports:/workspace" \
+                            pentest-toolkit:latest \
+                            pentest.sh ${image}
+                        """
+                    }
+                }
             }
         }
 
@@ -102,17 +106,23 @@ pipeline {
         // =========================
         stage('Security Auditor - Container Scan') {
             steps {
-                sh '''
-                echo "Scanning container: $CONTAINER_TO_SCAN"
-                
-                docker run -u root --rm \
-                -v /var/run/docker.sock:/var/run/docker.sock \
-                -v "$(pwd)/../reports":/app \
-                -w /app \
-                parthg23/security-auditor:latest \
-                /audit/containertest.sh $CONTAINER_TO_SCAN
-
-                '''
+                script {
+                    // Split your environment variable into an array
+                    def containers = env.CONTAINERS_TO_SCAN.split() // e.g., "my-nginx my-app-db redis"
+                    
+                    containers.each { cname ->
+                        sh """
+                        echo "Scanning container: ${cname}"
+                        
+                        docker run -u root --rm \
+                            -v /var/run/docker.sock:/var/run/docker.sock \
+                            -v "$(pwd)/../reports:/app" \
+                            -w /app \
+                            parthg23/security-auditor:latest \
+                            /audit/containertest.sh ${cname}
+                        """
+                    }
+                }
             }
         }
     }
